@@ -17,7 +17,7 @@
             "executable": "./target/thumbv7em-none-eabihf/debug/i2c-scanner",
             /* Run `cargo build --example hello` and uncomment this line to run semi-hosting example */
             //"executable": "./target/thumbv7m-none-eabi/debug/examples/hello",
-            "cpu": "cortex-m3",
+            "cpu": "cortex-m4",
             "machine": "lm3s6965evb",
         },
         {
@@ -34,19 +34,20 @@
             // "executable": "./target/thumbv7em-none-eabihf/debug/examples/itm",
             "device": "STM32F446RE",
             "configFiles": [
-                "interface/stlink-v2-1.cfg",
+                "interface/stlink.cfg",
                 "target/stm32f4x.cfg"
             ],
             "svdFile": "${workspaceRoot}/.vscode/STM32F446.svd", //Need to find the right svd file.
-            "swoConfig": {
-                "enabled": true,
-                "cpuFrequency": 8000000,
-                "swoFrequency": 1000000,
-                "source": "probe",
-                "decoders": [
-                    { "type": "console", "label": "ITM", "port": 0 }
-                ]
-            }
+            // Note: With swoconfig commented out, the debugger light comes on. Need to look into this.
+            // "swoConfig": {
+            //     "enabled": true,
+            //     "cpuFrequency": 8000000,
+            //     "swoFrequency": 2000000,
+            //     "source": "probe",
+            //     "decoders": [
+            //         { "type": "console", "label": "ITM", "port": 0 }
+            //     ]
+            // }
         }
     ]
 }
