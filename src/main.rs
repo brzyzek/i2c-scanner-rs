@@ -1,44 +1,41 @@
-#![no_std]
+//! Demonstrate the use of a blocking `Delay` using the SYST (sysclock) timer.
+
+#![deny(unsafe_code)]
+#![allow(clippy::empty_loop)]
 #![no_main]
-#![allow(unused)]
+#![no_std]
 
-use panic_halt as _;
+// Halt on panic
+use panic_halt as _; // panic handler
 
-// use cortex_m::asm;
-use cortex_m_rt as rt;
-
+use cortex_m_rt::entry;
 use stm32f4xx_hal as hal;
-use hal::prelude::*; // needed for the GpioExt trait (-> .split)
-use cortex_m_semihosting::hprintln;
 
-#[rt::entry]
+use crate::hal::{pac, prelude::*};
+
+#[entry]
 fn main() -> ! {
+    if let (Some(dp), Some(cp)) = (
+        pac::Peripherals::take(),
+        cortex_m::peripheral::Peripherals::take(),
+    ) {
+        // Set up the LED. On the Nucleo-446RE it's connected to pin PA5.
+        let gpioa = dp.GPIOA.split();
+        let mut led = gpioa.pa5.into_push_pull_output();
 
-    // hprintln!("Start of Main.");
+        // Set up the system clock. We want to run at 48MHz for this one.
+        let rcc = dp.RCC.constrain();
+        let clocks = rcc.cfgr.sysclk(48.MHz()).freeze();
 
-    // if let Some(peripherals) = hal::pac::Peripherals::take() {
-    //     let gpioa = peripherals.GPIOA.split(); // + sets RCC->AHB1ENR GPIOA bit
+        // Create a delay abstraction based on SysTick
+        let mut delay = cp.SYST.delay(&clocks);
 
-    //     // .into_push_pull_output performs three steps
-    //     // 1) set PUPDR: 00 -> no pull-up, no pull-down
-    //     // 2) set OTYPER: 0 -> output push-pull
-    //     // 3) set MODER: 01 -> general purpose output mode
-    //     let mut led = gpioa.pa5.into_push_pull_output();
-
-    //     let gpioc = peripherals.GPIOC.split();
-    //     let button = gpioc.pc13; // pins are input by default
-
-    //     loop {
-    //         // .is_high reads IDR
-    //         if button.is_high() {
-    //             // .set_low uses BSRR
-    //             led.set_low();
-    //         } else {
-    //             led.set_high();
-    //         }
-    //     }
-    // }
-
+        loop {
+            // On for 1s, off for 1s.
+            led.toggle();
+            delay.delay_ms(1000_u32);
+        }
+    }
 
     loop {}
 }
