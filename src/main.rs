@@ -3,7 +3,6 @@
 #![no_main]
 #![no_std]
 
-use hal::gpio::Pin;
 // Halt on panic
 use panic_halt as _;
 
@@ -26,9 +25,19 @@ fn main() -> ! {
         let rcc = dp.RCC.constrain();
         let clocks = rcc.cfgr.sysclk(48.MHz()).freeze();
 
+        let mut delay = cp.SYST.delay(&clocks);
+
+        let mut state = false;
+
         loop {
-            if button.is_low(){
+            if button.is_low(){ 
+                state = true;
+                delay.delay_ms(50_u32);
+            }
+            
+            if button.is_high() && state == true{
                 led.toggle();
+                state = false;
             }
         }
     }
