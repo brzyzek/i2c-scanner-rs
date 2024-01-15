@@ -15,7 +15,8 @@ use core::fmt::Write;
 
 use crate::hal::{
     prelude::*,
-    pac
+    pac,
+    i2c::Mode
 };
 
 #[entry]
@@ -30,25 +31,50 @@ fn main() -> ! {
 
         let mut delay = cp.SYST.delay(&clocks);
 
-        // LED Pin Config
+        // LED Config
         let gpioa = dp.GPIOA.split();
         let mut led = gpioa.pa5.into_push_pull_output();
 
-        // UART Pin Config
+        // UART Config
         let uart_tx_pin = gpioa.pa2;
         let mut uart_tx = dp.USART2.tx(uart_tx_pin, 115200.bps(), &clocks).unwrap();
 
-        let mut value: u8 = 0;
+        // I2C Config
+        let gpiob = dp.GPIOB.split();
+        let i2c_scl_pin = gpiob.pb8;
+        let i2c_sda_pin = gpiob.pb9;
+
+        
+
+        let mut i2c = dp.I2C1.i2c(
+            (i2c_scl_pin, i2c_sda_pin),
+            Mode::Standard {
+                frequency: 100.kHz(),
+            },
+            &clocks,
+        );
+    
+        let mut buffer: [u8; 255] = [0; 255];
 
         loop {
-            writeln!(uart_tx, "value: {value:02}\r").unwrap();
-            value = value.wrapping_add(1);
-            delay.delay(2.secs());
+            writeln!(uart_tx, "\r").unwrap();
+            writeln!(uart_tx, "Starting I2C Scanner... (If addresses do not show up, there is no device on the I2C bus.)\r").unwrap();
             led.toggle();
-            delay.delay_ms(100_u32);
+            for address in 0..127 {
+                let i2c_result = i2c.read(address, &mut buffer);
+                match i2c_result {
+                    Ok(_) => write!(uart_tx, " {address:#02x} ").unwrap(),
+                    Err(_) => write!(uart_tx, "  ~~  ").unwrap(),
+            }
+
+        }
+            writeln!(uart_tx, "\r").unwrap();
+            writeln!(uart_tx, "Finished.\r").unwrap();
+            led.toggle();
+            delay.delay_ms(60000_u32);
 
         }
     }
 
     loop {}
-}
+    }
