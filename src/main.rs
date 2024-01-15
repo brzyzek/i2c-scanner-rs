@@ -1,3 +1,5 @@
+// I2C Scanner written in Rust for an STM32F446 processor.
+
 #![deny(unsafe_code)]
 #![allow(clippy::empty_loop)]
 #![no_main]
@@ -9,7 +11,12 @@ use panic_halt as _;
 use cortex_m_rt::entry;
 use stm32f4xx_hal as hal;
 
-use crate::hal::{pac, prelude::*};
+use core::fmt::Write;
+
+use crate::hal::{
+    prelude::*,
+    pac
+};
 
 #[entry]
 fn main() -> ! {
@@ -17,28 +24,29 @@ fn main() -> ! {
         pac::Peripherals::take(),
         cortex_m::peripheral::Peripherals::take(),
     ) {
-        let gpioa = dp.GPIOA.split();
-        let gpioc = dp.GPIOC.split();
-        let mut led = gpioa.pa5.into_push_pull_output();
-        let button = gpioc.pc13.into_pull_up_input();
-
+        // Clock Config
         let rcc = dp.RCC.constrain();
-        let clocks = rcc.cfgr.sysclk(48.MHz()).freeze();
+        let clocks = rcc.cfgr.sysclk(25.MHz()).freeze();
 
         let mut delay = cp.SYST.delay(&clocks);
 
-        let mut state = false;
+        // LED Pin Config
+        let gpioa = dp.GPIOA.split();
+        let mut led = gpioa.pa5.into_push_pull_output();
+
+        // UART Pin Config
+        let uart_tx_pin = gpioa.pa2;
+        let mut uart_tx = dp.USART2.tx(uart_tx_pin, 115200.bps(), &clocks).unwrap();
+
+        let mut value: u8 = 0;
 
         loop {
-            if button.is_low(){ 
-                state = true;
-                delay.delay_ms(50_u32);
-            }
-            
-            if button.is_high() && state == true{
-                led.toggle();
-                state = false;
-            }
+            writeln!(uart_tx, "value: {value:02}\r").unwrap();
+            value = value.wrapping_add(1);
+            delay.delay(2.secs());
+            led.toggle();
+            delay.delay_ms(100_u32);
+
         }
     }
 
